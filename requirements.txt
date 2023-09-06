@@ -1,0 +1,5 @@
+py-cord==1.7.3
+Flask
+langdetect
+python-dotenv
+googletrans
