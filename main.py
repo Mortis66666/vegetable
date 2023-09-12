@@ -5,6 +5,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from googletrans import Translator
 from langdetect import detect
+from llama import get_response
 from server import run
 
 load_dotenv()
@@ -49,8 +50,32 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 @bot.command(aliases=["trans"])
-async def translate(ctx, *, sentence):
+async def translate(ctx: commands.Context, *, sentence):
     await ctx.message.reply(en_to_ja(sentence))
+
+@bot.command(aliases=["prompt"])
+async def llama(ctx: commands.Context, *, prompt_input):
+    generator = get_response(prompt_input)
+
+    message = None
+    full_content = ""
+
+    for i, item in enumerate(generator()):
+        full_content += item
+
+        if i % 3 != 0:
+            continue
+
+        if not full_content:
+            continue
+
+        if not message:
+            message = await ctx.reply(full_content)
+        else:
+            await message.edit(content=full_content)
+
+    await ctx.send(full_content)
+
 
 
 if __name__ == "__main__":
