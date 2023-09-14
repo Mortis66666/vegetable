@@ -74,7 +74,7 @@ async def llama(ctx: commands.Context, *, prompt_input):
         else:
             await message.edit(content=full_content)
 
-    await ctx.send(full_content)
+    await message.edit(content=full_content)
 
 
 
