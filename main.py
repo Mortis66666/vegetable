@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from googletrans import Translator
 from langdetect import detect
 from llama import get_response
-from server import run
+from server import setup
 
 load_dotenv()
 
@@ -31,6 +31,8 @@ def en_to_ja(s):
 
 @bot.event
 async def on_ready():
+    await setup(bot)
+
     print(f'{bot.user.name} has connected to Discord!')
 
 @bot.event
@@ -79,5 +81,4 @@ async def llama(ctx: commands.Context, *, prompt_input):
 
 
 if __name__ == "__main__":
-    run()
     bot.run(os.getenv('DISCORD_TOKEN'))
