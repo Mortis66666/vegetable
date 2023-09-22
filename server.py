@@ -1,5 +1,5 @@
 from aiohttp import web
-from discord.ext import commands, Embed, tasks
+from discord.ext import commands, tasks
 import discord
 import os
 import aiohttp
