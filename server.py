@@ -1,5 +1,5 @@
 from aiohttp import web
-from discord.ext import commands, tasks
+from discord.ext import commands, Embed, tasks
 import discord
 import os
 import aiohttp
@@ -12,7 +12,7 @@ async def setup(bot: commands.Bot):
     await bot.add_cog(Webserver(bot))
 
 class Webserver(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.web_server.start()
 
@@ -22,7 +22,20 @@ class Webserver(commands.Cog):
 
         @routes.post('/github')
         async def github(request):
-            print(request.actor)
+
+            actor = request["actor"]
+            payload = request["payload"]
+            commits = payload["commits"]
+            last_commit = commits[-1]
+
+            embed = discord.Embed(title="New push", color=0xff00, url=last_commit["url"])
+            embed.add_field(name="Message", value=last_commit["message"], inline=False)
+            embed.add_field(name="Author", value=last_commit["author"]["name"], inline=False)
+            embed.set_author(name=last_commit["author"]["name"], icon_url=actor["avatar_url"])
+
+
+            channel = await self.bot.fetch_channel(1137701853853929592)
+            await channel.send(embed=embed)
 
             return 200
 
