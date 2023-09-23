@@ -8,8 +8,8 @@ app = web.Application()
 routes = web.RouteTableDef()
 
 
-async def setup(bot: commands.Bot):
-    await bot.add_cog(Webserver(bot))
+def setup(bot: commands.Bot):
+    bot.add_cog(Webserver(bot))
 
 class Webserver(commands.Cog):
     def __init__(self, bot: commands.Bot):
