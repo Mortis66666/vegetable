@@ -22,9 +22,10 @@ class Webserver(commands.Cog):
 
         @routes.post('/github')
         async def github(request):
+            data = await request.json()
 
-            actor = request["actor"]
-            payload = request["payload"]
+            actor = data["actor"]
+            payload = data["payload"]
             commits = payload["commits"]
             last_commit = commits[-1]
 
