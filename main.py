@@ -31,7 +31,7 @@ def en_to_ja(s):
 
 @bot.event
 async def on_ready():
-    await setup(bot)
+    setup(bot)
 
     print(f'{bot.user.name} has connected to Discord!')
 
