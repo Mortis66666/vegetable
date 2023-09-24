@@ -24,21 +24,23 @@ class Webserver(commands.Cog):
         async def github(request):
             data = await request.json()
 
-            actor = data["actor"]
-            payload = data["payload"]
-            commits = payload["commits"]
+            print(data)
+
+            actor = data.get("actor")
+            payload = data.get("payload")
+            commits = payload.get("commits")
             last_commit = commits[-1]
 
-            embed = discord.Embed(title="New push", color=0xff00, url=last_commit["url"])
-            embed.add_field(name="Message", value=last_commit["message"], inline=False)
-            embed.add_field(name="Author", value=last_commit["author"]["name"], inline=False)
-            embed.set_author(name=last_commit["author"]["name"], icon_url=actor["avatar_url"])
+            embed = discord.Embed(title="New push", color=0xff00, url=last_commit.get("url"))
+            embed.add_field(name="Message", value=last_commit.get("message"), inline=False)
+            embed.add_field(name="Author", value=last_commit.get("author").get("name"), inline=False)
+            embed.set_author(name=last_commit.get("author").get("name"), icon_url=actor["avatar_url"])
 
 
             channel = await self.bot.fetch_channel(1137701853853929592)
             await channel.send(embed=embed)
 
-            return 200
+            return web.Response(text="Received GitHub Webhook")
 
         self.webserver_port = os.environ.get('PORT', 10000)
         app.add_routes(routes)
