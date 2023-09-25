@@ -1,6 +1,7 @@
 import discord
 import os
 import re
+import requests
 from discord.ext import commands
 from dotenv import load_dotenv
 from googletrans import Translator
@@ -31,7 +32,7 @@ def en_to_ja(s):
 
 @bot.event
 async def on_ready():
-    setup(bot)
+    await setup(bot)
 
     print(f'{bot.user.name} has connected to Discord!')
 
@@ -78,6 +79,26 @@ async def llama(ctx: commands.Context, *, prompt_input):
 
     await message.edit(content=full_content)
 
+@bot.command(aliases=["nimi"])
+async def toki(ctx, lang, *, sentence=""):
+    response = requests.get("https://linku.la/jasima/data.json").json()
+
+    # languages = response["languages"]
+    languages = ["en", "zh_hans", "zh_hant"]
+
+    lang = lang.lower()
+    if lang not in languages:
+        sentence = lang + " " + sentence
+        lang = "zh_hans"
+
+    data = response["data"]
+
+    definitions = {}
+
+    for word in sentence.strip().split():
+        definitions[word] = data[word]["def"][lang]
+
+    await ctx.reply("\n".join(f"- {word}: {definition}" for word, definition in definitions.items()))
 
 
 if __name__ == "__main__":
