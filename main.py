@@ -2,19 +2,21 @@ import discord
 import os
 import re
 import requests
+import sys
 from discord.ext import commands
 from dotenv import load_dotenv
-from googletrans import Translator
+# from googletrans import Translator
 from langdetect import detect
-from llama import get_response
+from deepseek import get_response, translate
 from server import setup
 
 load_dotenv()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
-translator = Translator()
+translator = None
 
+is_beta = '--beta' in sys.argv
 
 def is_japanese_sentence(text):
     # Use langdetect to check if the language is likely Japanese
@@ -27,12 +29,25 @@ def translate_japanese_to_english(japanese_sentence):
     translated = translator.translate(japanese_sentence, src='ja', dest='en')
     return translated.text
     
-def en_to_ja(s):
-    return translator.translate(s, src='en', dest='ja').text
+async def en_to_ja(s):
+    return filter_thinking(await translate(s, "English", "Japanese"))
+
+def filter_thinking(text, show_thinking=True):
+    # if the message includes </think>, remove anything inside <think> and </think>
+    # if show_thinking is True, remove the tags but keep the content, and add a thinking emoji
+
+    if "</think>" in text:
+        # Replace
+        text = re.sub(r"^.*?</think>", "", text)
+
+    else:
+        text = "🤔 " + (text.replace("<think>", "").strip() if show_thinking else "")
+
+    return text
 
 @bot.event
 async def on_ready():
-    await setup(bot)
+    # await setup(bot)
 
     print(f'{bot.user.name} has connected to Discord!')
 
@@ -53,18 +68,29 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 @bot.command(aliases=["trans"])
-async def translate(ctx: commands.Context, *, sentence):
-    await ctx.message.reply(en_to_ja(sentence))
+async def _translate(ctx: commands.Context, *, sentence):
+    await ctx.message.reply(await en_to_ja(sentence))
 
 @bot.command(aliases=["prompt"])
 async def llama(ctx: commands.Context, *, prompt_input):
-    generator = get_response(prompt_input)
+    generator = await get_response(prompt_input)
 
     message = None
     full_content = ""
 
-    for i, item in enumerate(generator()):
-        full_content += item
+    i = 0
+    refresh = True
+
+    async for part in generator:
+        part_content = part["message"]["content"]
+        
+        if len(full_content) + len(part_content) > 2000:
+            full_content = part_content
+            refresh = True
+        else:
+            full_content += part_content
+
+        i += 1
 
         if i % 3 != 0:
             continue
@@ -72,12 +98,14 @@ async def llama(ctx: commands.Context, *, prompt_input):
         if not full_content:
             continue
 
-        if not message:
-            message = await ctx.reply(full_content)
+        if refresh:
+            message = await ctx.reply(filter_thinking(full_content))
+            refresh = False
         else:
-            await message.edit(content=full_content)
+            await message.edit(content=filter_thinking(full_content))
 
-    await message.edit(content=full_content)
+
+    await message.edit(content=filter_thinking(full_content))
 
 @bot.command(aliases=["nimi"])
 async def toki(ctx, lang, *, sentence=""):
@@ -100,6 +128,6 @@ async def toki(ctx, lang, *, sentence=""):
 
     await ctx.reply("\n".join(f"- {word}: {definition}" for word, definition in definitions.items()))
 
-
 if __name__ == "__main__":
-    bot.run(os.getenv('DISCORD_TOKEN'))
+    token = os.getenv('DISCORD_TOKEN_BETA') if is_beta else os.getenv('DISCORD_TOKEN')
+    bot.run(token)
