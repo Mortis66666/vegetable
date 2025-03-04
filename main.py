@@ -7,8 +7,9 @@ from discord.ext import commands
 from dotenv import load_dotenv
 # from googletrans import Translator
 from langdetect import detect
-from deepseek import get_response, translate
+from deepseek import get_response, translate, anime_girl
 from server import setup
+from utils import *
 
 load_dotenv()
 
@@ -24,13 +25,20 @@ def is_japanese_sentence(text):
         return detect(text) == 'ja'
     except:
         return False
+    
+def is_chinese_sentence(text):
+    # Use langdetect to check if the language is likely Japanese
+    try:
+        return detect(text) in ['zh-cn', 'zh-tw']
+    except:
+        return False
 
 def translate_japanese_to_english(japanese_sentence):
     translated = translator.translate(japanese_sentence, src='ja', dest='en')
     return translated.text
     
 async def en_to_ja(s):
-    return filter_thinking(await translate(s, "English", "Japanese"))
+    return (await translate(s, "English", "Japanese"))
 
 def filter_thinking(text, show_thinking=True):
     # if the message includes </think>, remove anything inside <think> and </think>
@@ -61,15 +69,59 @@ async def on_message(message: discord.Message):
     if re.search(r"\bcanva\b", content):
         await message.reply("*canvas")
 
-    if is_japanese_sentence(content):
+    if message.channel.id == 1346382017599897640:
+        generator = await anime_girl(content)
+
+        msg = None
+        full_content = ""
+
+        i = 0
+        refresh = True
+
+        async for part in generator:
+            part_content = part["message"]["content"]
+            
+            if len(full_content) + len(part_content) > 2000:
+                full_content = part_content
+                refresh = True
+            else:
+                full_content += part_content
+
+            i += 1
+
+            if i % 3 != 0:
+                continue
+
+            if not full_content:
+                continue
+
+            if refresh:
+                msg = await message.reply((full_content))
+                refresh = False
+            else:
+                await msg.edit(content=(full_content))
+
+
+        await msg.edit(content=(full_content))
+
+        return
+
+    if is_chinese_sentence(content):
+        await message.add_reaction("🇨🇳")
+        await message.reply(f"Chinese sentence detected. Translation:\n{await translate(content, "Chinese", "English")}")
+    elif is_japanese_sentence(content):
         await message.add_reaction("🇯🇵")
-        await message.reply(f"Japanese sentence detected. Translation:\n{translate_japanese_to_english(content)}")
+        await message.reply(f"Japanese sentence detected. Translation:\n{await translate(content, "Japanese", "English")}")
 
     await bot.process_commands(message)
 
-@bot.command(aliases=["trans"])
-async def _translate(ctx: commands.Context, *, sentence):
-    await ctx.message.reply(await en_to_ja(sentence))
+@bot.command(aliases=["trans", "t"])
+async def _translate(ctx: commands.Context, target_lang, *, sentence):
+    await ctx.message.reply(await translate(sentence, get_source_lang(sentence), target_lang))
+
+@bot.command(aliases=["manualtranslate", "mantrans", "mt"])
+async def _manual_translate(ctx: commands.Context, lang1, lang2, *, sentence):
+    await ctx.message.reply(await translate(sentence, lang1, lang2))
 
 @bot.command(aliases=["prompt"])
 async def llama(ctx: commands.Context, *, prompt_input):
@@ -99,13 +151,13 @@ async def llama(ctx: commands.Context, *, prompt_input):
             continue
 
         if refresh:
-            message = await ctx.reply(filter_thinking(full_content))
+            message = await ctx.reply((full_content))
             refresh = False
         else:
-            await message.edit(content=filter_thinking(full_content))
+            await message.edit(content=(full_content))
 
 
-    await message.edit(content=filter_thinking(full_content))
+    await message.edit(content=(full_content))
 
 @bot.command(aliases=["nimi"])
 async def toki(ctx, lang, *, sentence=""):
