@@ -10,6 +10,7 @@ from langdetect import detect
 from deepseek import get_response, translate, anime_girl
 from server import setup
 from utils import *
+from log import log as print
 
 load_dotenv()
 
@@ -69,7 +70,7 @@ async def on_message(message: discord.Message):
     if re.search(r"\bcanva\b", content):
         await message.reply("*canvas")
 
-    if message.channel.id == 1346382017599897640:
+    if message.channel.id == 1346382017599897640 and not content.startswith("/unanime") and not content.startswith("/ua"):
         generator = await anime_girl(content)
 
         msg = None
@@ -179,6 +180,12 @@ async def toki(ctx, lang, *, sentence=""):
         definitions[word] = data[word]["def"][lang]
 
     await ctx.reply("\n".join(f"- {word}: {definition}" for word, definition in definitions.items()))
+
+@bot.command(aliases=['ping', 'p'])
+async def _ping(ctx: commands.Context):
+    """Ping the bot to check if it's alive. Also sends the latency."""
+    latency = round(bot.latency * 1000)
+    await ctx.send(f"Pong! 🏓 **Latency: {latency}ms**")
 
 if __name__ == "__main__":
     token = os.getenv('DISCORD_TOKEN_BETA') if is_beta else os.getenv('DISCORD_TOKEN')
